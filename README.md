@@ -1,10 +1,19 @@
 # web-rs
 Rust bindings to make WASM more tolerable.
 
+## Unstable API
+Some crates use unstable `web_sys` APIs and you may need to set `--cfg=web_sys_unstable_apis` when compiling.
+For more information, see the [web-sys docs](https://rustwasm.github.io/wasm-bindgen/web-sys/unstable-apis.html).
+
+There's a few ways to set this depending on the environment:
+- [Cargo Config](./cargo/config.toml) via `rustflags`
+- [Github Action](.github/workflows/pr.yml) via `GITHUB_ENV`
+- [docs.rs](./web-codecs/Cargo.toml) via `package.metadata.docs.rs`
+
 ## web-codecs
 [web-codecs](./web-codecs) provides a wrapper around the [WebCodecs API](https://developer.mozilla.org/en-US/docs/Web/API/WebCodecs_API).
 
-The callbacks and Streams have been replaced with a channel-like API.
+The callbacks have been replaced with a channel-like API.
 For example, the `VideoEncoder` is split into a `VideoEncoder` for input and a `VideoEncoded` for output.
 
 ## web-streams

@@ -51,3 +51,7 @@ features = [
 	"EncodedAudioChunkInit",
 	"EncodedAudioChunkType",
 ]
+
+[package.metadata.docs.rs]
+rustdoc-args = ["--cfg", "web_sys_unstable_apis"]
+rustc-args = ["--cfg", "web_sys_unstable_apis"]
