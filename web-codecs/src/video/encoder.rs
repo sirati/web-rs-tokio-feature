@@ -1,12 +1,9 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, rc::Rc, time::Duration};
 
 use tokio::sync::{mpsc, watch};
 use wasm_bindgen::prelude::*;
 
-use crate::{
-	units::{Duration, Timestamp},
-	EncodedFrame, Error,
-};
+use crate::{EncodedFrame, Error, Timestamp};
 
 use super::{Dimensions, VideoDecoderConfig, VideoFrame};
 

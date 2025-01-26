@@ -1,6 +1,8 @@
+use std::time::Duration;
+
 use derive_more::From;
 
-use crate::{Duration, Timestamp};
+use crate::Timestamp;
 
 #[derive(Debug, From)]
 pub struct VideoFrame(web_sys::VideoFrame);

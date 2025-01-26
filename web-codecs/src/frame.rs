@@ -2,7 +2,7 @@ use std::fmt;
 
 use bytes::{Bytes, BytesMut};
 
-use crate::units::Timestamp;
+use crate::Timestamp;
 
 pub struct EncodedFrame {
 	pub payload: Bytes,
