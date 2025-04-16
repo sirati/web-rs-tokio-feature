@@ -9,17 +9,20 @@ version = "0.3.5"
 edition = "2021"
 
 categories = ["wasm", "multimedia", "web-programming", "api-bindings"]
+rust-version = "1.85"
 
 [dependencies]
+bytes = "1"
+derive_more = { version = "2", features = ["from", "display"] }
+js-sys = "0.3.77"
+thiserror = "2"
+tokio = { version = "1", features = ["sync", "macros"] }
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 
-thiserror = "1"
-js-sys = "0.3.77"
-tokio = { version = "1", features = ["sync", "macros"] }
-bytes = "1"
-
-derive_more = { version = "1", features = ["from", "display"] }
+[package.metadata.docs.rs]
+rustdoc-args = ["--cfg", "web_sys_unstable_apis"]
+rustc-args = ["--cfg", "web_sys_unstable_apis"]
 
 [dependencies.web-sys]
 version = "0.3.77"
@@ -55,7 +58,3 @@ features = [
 	"AudioEncoderConfig",
 	"AudioSampleFormat",
 ]
-
-[package.metadata.docs.rs]
-rustdoc-args = ["--cfg", "web_sys_unstable_apis"]
-rustc-args = ["--cfg", "web_sys_unstable_apis"]
