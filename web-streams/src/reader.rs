@@ -1,3 +1,4 @@
+use std::future::Future;
 use std::marker::PhantomData;
 
 use js_sys::Reflect;
@@ -62,5 +63,51 @@ impl<T: JsCast> Drop for Reader<T> {
 	/// Release the lock
 	fn drop(&mut self) {
 		self.inner.release_lock();
+	}
+}
+
+
+use std::pin::Pin;
+use std::task::{Context, Poll};
+use wasm_bindgen::JsCast;
+use js_sys::Uint8Array;
+
+#[cfg(feature = "tokio")]
+impl tokio::io::AsyncRead for Reader<Uint8Array> {
+	
+	fn poll_read(
+		mut self: Pin<&mut Self>,
+		cx: &mut Context<'_>,
+		buf: &mut tokio::io::ReadBuf<'_>,
+	) -> Poll<std::io::Result<()>> {
+		// Start a new read if needed
+		if self.read.is_none() {
+			self.read = Some(self.inner.read());
+		}
+
+		// Poll the JS promise
+		let promise = self.read.as_ref().unwrap();
+		let mut js_fut = JsFuture::from(promise.clone());
+		match Pin::new(&mut js_fut).poll(cx) {
+			Poll::Pending => Poll::Pending,
+			Poll::Ready(Ok(js_val)) => {
+				self.read.take();
+				let result: ReadableStreamReadResult = js_val.unchecked_into();
+				if js_sys::Reflect::get(&result, &"done".into()).unwrap().as_bool().unwrap_or(false) {
+					return Poll::Ready(Ok(())); // EOF
+				}
+				let value = js_sys::Reflect::get(&result, &"value".into()).unwrap();
+				let array: Uint8Array = value.unchecked_into();
+				let len = std::cmp::min(buf.remaining(), array.length() as usize);
+				array.slice(0, len as u32).copy_to(buf.initialize_unfilled());
+				unsafe { buf.assume_init(len); }
+				buf.advance(len);
+				Poll::Ready(Ok(()))
+			}
+			Poll::Ready(Err(_)) => {
+				self.read.take();
+				Poll::Ready(Err(std::io::Error::new(std::io::ErrorKind::Other, "js read error")))
+			}
+		}
 	}
 }
