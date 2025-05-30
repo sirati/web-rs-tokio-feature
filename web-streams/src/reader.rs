@@ -74,18 +74,16 @@ use js_sys::Uint8Array;
 
 #[cfg(feature = "tokio")]
 impl tokio::io::AsyncRead for Reader<Uint8Array> {
-	
+
 	fn poll_read(
 		mut self: Pin<&mut Self>,
 		cx: &mut Context<'_>,
 		buf: &mut tokio::io::ReadBuf<'_>,
 	) -> Poll<std::io::Result<()>> {
-		// Start a new read if needed
 		if self.read.is_none() {
 			self.read = Some(self.inner.read());
 		}
 
-		// Poll the JS promise
 		let promise = self.read.as_ref().unwrap();
 		let mut js_fut = JsFuture::from(promise.clone());
 		match Pin::new(&mut js_fut).poll(cx) {
@@ -98,10 +96,24 @@ impl tokio::io::AsyncRead for Reader<Uint8Array> {
 				}
 				let value = js_sys::Reflect::get(&result, &"value".into()).unwrap();
 				let array: Uint8Array = value.unchecked_into();
-				let len = std::cmp::min(buf.remaining(), array.length() as usize);
-				array.slice(0, len as u32).copy_to(buf.initialize_unfilled());
+				let array_len = array.length() as usize;
+				let len = std::cmp::min(buf.remaining(), array_len);
+
+				// Copy what fits
+				array.slice(0, len as u32).copy_to_uninit(unsafe {buf.unfilled_mut()});
 				unsafe { buf.assume_init(len); }
 				buf.advance(len);
+
+				// If there are leftover bytes, create a new ReadableStreamReadResult and set self.read
+				if len < array_len {
+					let leftover = array.slice(len as u32, array_len as u32);
+					let obj = js_sys::Object::new();
+					js_sys::Reflect::set(&obj, &"done".into(), &JsValue::FALSE).unwrap();
+					js_sys::Reflect::set(&obj, &"value".into(), &leftover).unwrap();
+					let promise = js_sys::Promise::resolve(&obj);
+					self.read = Some(promise);
+				}
+
 				Poll::Ready(Ok(()))
 			}
 			Poll::Ready(Err(_)) => {
