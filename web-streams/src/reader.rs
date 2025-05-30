@@ -91,11 +91,11 @@ impl tokio::io::AsyncRead for Reader<Uint8Array> {
 			Poll::Ready(Ok(js_val)) => {
 				self.read.take();
 				let result: ReadableStreamReadResult = js_val.unchecked_into();
-				if js_sys::Reflect::get(&result, &"done".into()).unwrap().as_bool().unwrap_or(false) {
+				if result.get_done().unwrap_or(false) {
 					return Poll::Ready(Ok(())); // EOF
 				}
-				let value = js_sys::Reflect::get(&result, &"value".into()).unwrap();
-				let array: Uint8Array = value.unchecked_into();
+				let value = result.get_value();
+				let array: Uint8Array = value.unchecked_into(); //todo unchecked???
 				let array_len = array.length() as usize;
 				let len = std::cmp::min(buf.remaining(), array_len);
 
@@ -107,10 +107,10 @@ impl tokio::io::AsyncRead for Reader<Uint8Array> {
 				// If there are leftover bytes, create a new ReadableStreamReadResult and set self.read
 				if len < array_len {
 					let leftover = array.slice(len as u32, array_len as u32);
-					let obj = js_sys::Object::new();
-					js_sys::Reflect::set(&obj, &"done".into(), &JsValue::FALSE).unwrap();
-					js_sys::Reflect::set(&obj, &"value".into(), &leftover).unwrap();
-					let promise = js_sys::Promise::resolve(&obj);
+					let result = ReadableStreamReadResult::new();
+					result.set_done(false);
+					result.set_value(&**leftover);
+					let promise = js_sys::Promise::resolve(&**result);
 					self.read = Some(promise);
 				}
 
